@@ -1,0 +1,398 @@
+{
+  "name": "Fiverr Order to AI Article Generator with Telegram Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "filters": {
+          "sender": "fiverr.com"
+        }
+      },
+      "id": "9dc2b78c-b45c-4f3b-9e26-01548c659cad",
+      "name": "Monitor Fiverr Emails",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        304
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "NJ4i01cYHira2zcO",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "api_endpoint",
+              "value": "<__PLACEHOLDER_VALUE__your_seo_api_endpoint__>",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "api_method",
+              "value": "POST",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "telegram_chat_id",
+              "value": "<__PLACEHOLDER_VALUE__your_telegram_chat_id__>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5553c53d-89a0-4f8f-870f-05a96693cc86",
+      "name": "Workflow Configuration",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "email_from",
+              "value": "={{ $('Monitor Fiverr Emails').item.json.from }}",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "email_subject",
+              "value": "={{ $('Monitor Fiverr Emails').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "email_body",
+              "value": "={{ $('Monitor Fiverr Emails').item.json.textPlain || $('Monitor Fiverr Emails').item.json.textHtml }}",
+              "type": "string"
+            },
+            {
+              "id": "id-4",
+              "name": "order_requirements",
+              "value": "={{ $('Monitor Fiverr Emails').item.json.textPlain || $('Monitor Fiverr Emails').item.json.textHtml }}",
+              "type": "string"
+            },
+            {
+              "id": "id-5",
+              "name": "received_date",
+              "value": "={{ $('Monitor Fiverr Emails').item.json.date }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d39376a3-e135-4ecb-904a-d77a61ed090b",
+      "name": "Extract Order Requirements",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://187.77.96.80:8000/write-article",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "brief",
+              "value": "=Write a 1500-word SEO blog article about AI automation for small businesses.\n"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "1d8a6361-e6c0-4033-b8cf-ebd8b3c7f4cd",
+      "name": "Generate SEO Article via API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        928,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Review and improve this article:\n\n{{ $('Generate SEO Article via API').item.json.article_text || $('Generate SEO Article via API').item.json.content || $('Generate SEO Article via API').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert SEO content editor. Your role is to review articles and improve them for:\n1. Grammar and clarity\n2. SEO structure (headings, keywords, readability)\n3. Originality and engagement\n4. Professional tone\n\nProvide the improved article text, a quality score (1-10), and specific suggestions for further improvement."
+        }
+      },
+      "id": "63b175e8-c292-4754-89d1-d87ef668ccb6",
+      "name": "AI Quality Check",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1152,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "options": {}
+      },
+      "id": "cad6ccc1-9adb-4386-901a-ce54d66ce0d4",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        560
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "wPptAwQN12YQYaA4",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"improved_article\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"The improved article text with better grammar, SEO structure, and clarity\"\n\t\t},\n\t\t\"quality_score\": {\n\t\t\t\"type\": \"number\",\n\t\t\t\"description\": \"Quality score from 1-10 rating the article\"\n\t\t},\n\t\t\"suggestions\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Specific suggestions for further improvement\"\n\t\t},\n\t\t\"seo_keywords\": {\n\t\t\t\"type\": \"string\",\n\t\t\t\"description\": \"Key SEO keywords identified in the article\"\n\t\t}\n\t}\n}"
+      },
+      "id": "784035db-4b8a-4976-93b1-4075858d6a9d",
+      "name": "Structure Quality Report",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "id-1",
+              "name": "notification_title",
+              "value": "🎉 New Fiverr Article Ready for Review",
+              "type": "string"
+            },
+            {
+              "id": "id-2",
+              "name": "notification_body",
+              "value": "={{ '📧 Order from: ' + $('Extract Order Requirements').item.json.email_from + '\\n' + '📝 Subject: ' + $('Extract Order Requirements').item.json.email_subject + '\\n\\n' + '✅ Quality Score: ' + $('AI Quality Check').item.json.output.quality_score + '/10\\n\\n' + '📄 Improved Article:\\n' + $('AI Quality Check').item.json.output.improved_article.substring(0, 500) + '...\\n\\n' + '💡 Suggestions: ' + $('AI Quality Check').item.json.output.suggestions + '\\n\\n' + '🔗 Original API Response: ' + ($('Generate SEO Article via API').item.json.file_link || 'No link provided') + '\\n\\n' + '⏳ Please reply with:\\n- APPROVE to accept\\n- REWRITE to request changes' }}",
+              "type": "string"
+            },
+            {
+              "id": "id-3",
+              "name": "chat_id",
+              "value": "={{ $('Workflow Configuration').item.json.telegram_chat_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "613d51bd-300b-45bd-9d50-a0ee83d904aa",
+      "name": "Prepare Telegram Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.notification_title + '\\n\\n' + $json.notification_body }}",
+        "replyMarkup": "forceReply",
+        "forceReply": {},
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "911dfc88-4450-4419-8a22-90d1e3bd99b0",
+      "name": "Send Telegram Notification",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1728,
+        304
+      ],
+      "webhookId": "30319f77-2edc-49a0-a746-77a452c52c82",
+      "credentials": {
+        "telegramApi": {
+          "id": "xzzItuwkyb8Mepli",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resume": "webhook",
+        "limitWaitTime": true,
+        "resumeAmount": 24,
+        "options": {
+          "responseData": "Approval received. Workflow will continue processing."
+        }
+      },
+      "id": "c9892dd5-2eeb-43a8-907f-57e6b7e5f70a",
+      "name": "Wait for Human Approval",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1952,
+        304
+      ],
+      "webhookId": "dd94c4d3-98d0-41b0-9cd7-b139775154dd"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Monitor Fiverr Emails": {
+      "main": [
+        [
+          {
+            "node": "Workflow Configuration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Workflow Configuration": {
+      "main": [
+        [
+          {
+            "node": "Extract Order Requirements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Order Requirements": {
+      "main": [
+        [
+          {
+            "node": "Generate SEO Article via API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate SEO Article via API": {
+      "main": [
+        [
+          {
+            "node": "AI Quality Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Quality Check",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structure Quality Report": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Quality Check",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Quality Check": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "Send Telegram Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Telegram Notification": {
+      "main": [
+        [
+          {
+            "node": "Wait for Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "f1cabf97-0d12-4996-bd4e-fed4154d0365",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "38bbeb4d8c05346661dacb34fb406ee7498b84809033680229fb00a9f3750d9d"
+  },
+  "id": "M_R9w4Zl4Vunni1YV9eZI",
+  "tags": []
+}
